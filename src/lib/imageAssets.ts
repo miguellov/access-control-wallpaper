@@ -1,5 +1,4 @@
-import bgSrc from '../assets/westjet-bg.jpg';
-import logoSrc from '../assets/westjet-logo.png';
+import { getAirline, type AirlineId } from './airlines';
 
 export interface ImageAssets {
   bg: HTMLImageElement;
@@ -15,14 +14,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-let assetsPromise: Promise<ImageAssets> | null = null;
+const cache = new Map<AirlineId, Promise<ImageAssets>>();
 
-export function loadAssets(): Promise<ImageAssets> {
-  if (!assetsPromise) {
-    assetsPromise = Promise.all([loadImage(bgSrc), loadImage(logoSrc)]).then(([bg, logo]) => ({
-      bg,
-      logo,
-    }));
-  }
-  return assetsPromise;
+export function loadAssets(airlineId: AirlineId): Promise<ImageAssets> {
+  const cached = cache.get(airlineId);
+  if (cached) return cached;
+
+  const airline = getAirline(airlineId);
+  const promise = Promise.all([loadImage(airline.bg), loadImage(airline.logo)]).then(([bg, logo]) => ({
+    bg,
+    logo,
+  }));
+
+  cache.set(airlineId, promise);
+  return promise;
 }

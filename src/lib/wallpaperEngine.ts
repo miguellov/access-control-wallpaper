@@ -1,9 +1,12 @@
 import { loadAssets } from './imageAssets';
+import { getAirline, type AirlineId } from './airlines';
+import type { AirlineTheme } from './airlines';
 import type { WallpaperType } from './wallpaperTypes';
 
 export interface WallpaperData {
   position: string;
   type: WallpaperType;
+  airlineId: AirlineId;
 }
 
 const BASE_WIDTH = 1080;
@@ -36,23 +39,23 @@ function drawCoverImage(
   ctx.drawImage(img, drawX, drawY, drawW, drawH);
 }
 
-function drawLockOverlay(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawLockOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, theme: AirlineTheme) {
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, 'rgba(6, 21, 37, 0.55)');
-  gradient.addColorStop(0.35, 'rgba(6, 21, 37, 0.25)');
-  gradient.addColorStop(0.55, 'rgba(6, 21, 37, 0.45)');
-  gradient.addColorStop(1, 'rgba(6, 21, 37, 0.75)');
+  gradient.addColorStop(0, `rgba(${theme.overlayRgb}, 0.55)`);
+  gradient.addColorStop(0.35, `rgba(${theme.overlayRgb}, 0.25)`);
+  gradient.addColorStop(0.55, `rgba(${theme.overlayRgb}, 0.45)`);
+  gradient.addColorStop(1, `rgba(${theme.overlayRgb}, 0.75)`);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
 }
 
-function drawHomeOverlay(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawHomeOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, theme: AirlineTheme) {
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, 'rgba(6, 21, 37, 0.35)');
-  gradient.addColorStop(0.25, 'rgba(6, 21, 37, 0.05)');
-  gradient.addColorStop(0.55, 'rgba(6, 21, 37, 0.1)');
-  gradient.addColorStop(0.8, 'rgba(6, 21, 37, 0.35)');
-  gradient.addColorStop(1, 'rgba(6, 21, 37, 0.55)');
+  gradient.addColorStop(0, `rgba(${theme.overlayRgb}, 0.35)`);
+  gradient.addColorStop(0.25, `rgba(${theme.overlayRgb}, 0.05)`);
+  gradient.addColorStop(0.55, `rgba(${theme.overlayRgb}, 0.1)`);
+  gradient.addColorStop(0.8, `rgba(${theme.overlayRgb}, 0.35)`);
+  gradient.addColorStop(1, `rgba(${theme.overlayRgb}, 0.55)`);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
 }
@@ -81,6 +84,7 @@ function drawVerticalPositionText(
   w: number,
   h: number,
   scale: number,
+  theme: AirlineTheme,
 ) {
   const maxLength = h * 0.78;
   let fontSize = 220 * scale;
@@ -105,10 +109,10 @@ function drawVerticalPositionText(
   const barX = -textWidth / 2 - fontSize * 0.25;
   const barH = barW;
 
-  ctx.fillStyle = 'rgba(6, 21, 37, 0.55)';
+  ctx.fillStyle = `rgba(${theme.overlayRgb}, 0.55)`;
   ctx.fillRect(barX, -barH / 2, textWidth + fontSize * 0.5, barH);
 
-  ctx.strokeStyle = 'rgba(0, 171, 199, 0.5)';
+  ctx.strokeStyle = theme.borderAccent;
   ctx.lineWidth = 3 * scale;
   ctx.strokeRect(barX, -barH / 2, textWidth + fontSize * 0.5, barH);
 
@@ -121,7 +125,7 @@ function drawVerticalPositionText(
   ctx.lineWidth = 8 * scale;
   ctx.strokeText(upper, 0, 0);
 
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = theme.positionColor;
   ctx.fillText(upper, 0, 0);
 
   ctx.restore();
@@ -133,6 +137,7 @@ function drawPositionText(
   w: number,
   centerY: number,
   scale: number,
+  theme: AirlineTheme,
 ) {
   const maxWidth = w * 0.9;
   let fontSize = 120 * scale;
@@ -143,7 +148,7 @@ function drawPositionText(
   ctx.shadowOffsetY = 6 * scale;
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
   ctx.lineWidth = 6 * scale;
-  ctx.fillStyle = '#00E5FF';
+  ctx.fillStyle = theme.positionColor;
 
   const upper = text.toUpperCase();
 
@@ -172,6 +177,33 @@ function drawPositionText(
   ctx.shadowOffsetY = 0;
 }
 
+function drawLogo(
+  ctx: CanvasRenderingContext2D,
+  logo: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  theme: AirlineTheme,
+  withShadow = false,
+) {
+  if (withShadow) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 16 * (width / 200);
+  }
+
+  if (theme.logoScreenBlend) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(logo, x, y, width, height);
+    ctx.restore();
+  } else {
+    ctx.drawImage(logo, x, y, width, height);
+  }
+
+  ctx.shadowBlur = 0;
+}
+
 function drawLockScreen(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -180,18 +212,19 @@ function drawLockScreen(
   scale: number,
   bg: HTMLImageElement,
   logo: HTMLImageElement,
+  theme: AirlineTheme,
 ) {
   drawCoverImage(ctx, bg, w, h);
-  drawLockOverlay(ctx, w, h);
+  drawLockOverlay(ctx, w, h, theme);
 
   ctx.textAlign = 'center';
 
-  const logoWidth = 200 * scale;
+  const logoWidth = 200 * scale * theme.logoLockScale;
   const logoHeight = (logo.height / logo.width) * logoWidth;
   const logoX = (w - logoWidth) / 2;
   const logoY = h * 0.14;
 
-  ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+  drawLogo(ctx, logo, logoX, logoY, logoWidth, logoHeight, theme);
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.font = `600 ${20 * scale}px "Segoe UI", system-ui, sans-serif`;
@@ -203,7 +236,7 @@ function drawLockScreen(
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
 
-  drawPositionText(ctx, data.position, w, h * 0.58, scale);
+  drawPositionText(ctx, data.position, w, h * 0.58, scale, theme);
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
   ctx.font = `400 ${15 * scale}px "Segoe UI", system-ui, sans-serif`;
@@ -219,21 +252,19 @@ function drawHomeScreen(
   scale: number,
   bg: HTMLImageElement,
   logo: HTMLImageElement,
+  theme: AirlineTheme,
 ) {
   drawCoverImage(ctx, bg, w, h);
-  drawHomeOverlay(ctx, w, h);
+  drawHomeOverlay(ctx, w, h, theme);
 
-  const logoWidth = 120 * scale;
+  const logoWidth = 120 * scale * theme.logoHomeScale;
   const logoHeight = (logo.height / logo.width) * logoWidth;
   const logoX = (w - logoWidth) / 2;
   const logoY = h * 0.06;
 
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-  ctx.shadowBlur = 16 * scale;
-  ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
-  ctx.shadowBlur = 0;
+  drawLogo(ctx, logo, logoX, logoY, logoWidth, logoHeight, theme, true);
 
-  drawVerticalPositionText(ctx, data.position, w, h, scale);
+  drawVerticalPositionText(ctx, data.position, w, h, scale, theme);
 }
 
 export async function renderWallpaper(
@@ -245,7 +276,8 @@ export async function renderWallpaper(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const { bg, logo } = await loadAssets();
+  const theme = getAirline(data.airlineId);
+  const { bg, logo } = await loadAssets(data.airlineId);
 
   canvas.width = width;
   canvas.height = height;
@@ -253,9 +285,9 @@ export async function renderWallpaper(
   const scale = width / BASE_WIDTH;
 
   if (data.type === 'home') {
-    drawHomeScreen(ctx, width, height, data, scale, bg, logo);
+    drawHomeScreen(ctx, width, height, data, scale, bg, logo, theme);
   } else {
-    drawLockScreen(ctx, width, height, data, scale, bg, logo);
+    drawLockScreen(ctx, width, height, data, scale, bg, logo, theme);
   }
 }
 

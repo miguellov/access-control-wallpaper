@@ -1,5 +1,3 @@
-export const AIRLINE = 'WESTJET';
-
 export const POSITIONS = [
   'OBS MAKEUP',
   'CIERRE COUNTER',

@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEVICE_ID, DEVICES } from './lib/resolutions';
-import { AIRLINE, POSITIONS, type Position } from './lib/positions';
+import { POSITIONS, type Position } from './lib/positions';
+import { AIRLINES, DEFAULT_AIRLINE_ID, getAirline, type AirlineId } from './lib/airlines';
 import { WALLPAPER_TYPES, type WallpaperType } from './lib/wallpaperTypes';
 import { downloadWallpaper, renderWallpaper } from './lib/wallpaperEngine';
-import logoSrc from './assets/westjet-logo.png';
 import './App.css';
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [airlineId, setAirlineId] = useState<AirlineId>(DEFAULT_AIRLINE_ID);
   const [position, setPosition] = useState<Position>('OBS MAKEUP');
   const [wallpaperType, setWallpaperType] = useState<WallpaperType>('lock');
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE_ID);
   const [loading, setLoading] = useState(true);
 
+  const airline = getAirline(airlineId);
   const device = DEVICES.find((d) => d.id === deviceId) ?? DEVICES[0];
 
   const previewScale = 0.28;
@@ -23,19 +25,36 @@ function App() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     setLoading(true);
-    await renderWallpaper(canvas, { position, type: wallpaperType }, previewW, previewH);
+    await renderWallpaper(
+      canvas,
+      { position, type: wallpaperType, airlineId },
+      previewW,
+      previewH,
+    );
     setLoading(false);
-  }, [position, wallpaperType, previewW, previewH]);
+  }, [position, wallpaperType, airlineId, previewW, previewH]);
 
   useEffect(() => {
     draw();
   }, [draw]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--accent', airline.accent);
+    root.style.setProperty('--accent-bg', airline.accentBg);
+    root.style.setProperty('--accent-border', airline.accentBorder);
+  }, [airline]);
+
   const handleDownload = async () => {
     const offscreen = document.createElement('canvas');
-    await renderWallpaper(offscreen, { position, type: wallpaperType }, device.width, device.height);
+    await renderWallpaper(
+      offscreen,
+      { position, type: wallpaperType, airlineId },
+      device.width,
+      device.height,
+    );
     const typeLabel = wallpaperType === 'lock' ? 'bloqueo' : 'inicio';
-    const safeName = `${AIRLINE}-${typeLabel}-${position}`
+    const safeName = `${airline.name}-${typeLabel}-${position}`
       .replace(/\s+/g, '-')
       .toLowerCase();
     downloadWallpaper(offscreen, `${safeName}-${device.width}x${device.height}.png`);
@@ -45,9 +64,9 @@ function App() {
     setLoading(true);
     for (const type of ['lock', 'home'] as const) {
       const offscreen = document.createElement('canvas');
-      await renderWallpaper(offscreen, { position, type }, device.width, device.height);
+      await renderWallpaper(offscreen, { position, type, airlineId }, device.width, device.height);
       const typeLabel = type === 'lock' ? 'bloqueo' : 'inicio';
-      const safeName = `${AIRLINE}-${typeLabel}-${position}`
+      const safeName = `${airline.name}-${typeLabel}-${position}`
         .replace(/\s+/g, '-')
         .toLowerCase();
       downloadWallpaper(offscreen, `${safeName}-${device.width}x${device.height}.png`);
@@ -61,9 +80,9 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-brand">
-          <img src={logoSrc} alt="WestJet" className="header-logo" />
+          <img src={airline.logo} alt={airline.name} className="header-logo" />
           <div>
-            <h1>WestJet Access Control</h1>
+            <h1>{airline.name} Access Control</h1>
             <p>Fondos para Samsung Galaxy</p>
           </div>
         </div>
@@ -71,6 +90,23 @@ function App() {
 
       <main className="main">
         <section className="panel">
+          <div className="panel-section">
+            <h2>Aerolínea</h2>
+            <div className="airline-grid">
+              {AIRLINES.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`airline-btn ${airlineId === a.id ? 'active' : ''}`}
+                  onClick={() => setAirlineId(a.id)}
+                >
+                  <img src={a.logo} alt={a.name} className="airline-btn-logo" />
+                  <span>{a.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="panel-section">
             <h2>Tipo de fondo</h2>
             <div className="type-tabs">
@@ -149,7 +185,7 @@ function App() {
             </div>
           </div>
           <p className="preview-label">
-            {activeType?.label} · {device.label} · {device.width} × {device.height}
+            {airline.name} · {activeType?.label} · {device.width} × {device.height}
           </p>
         </section>
       </main>
