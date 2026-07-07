@@ -18,6 +18,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [previewScale, setPreviewScale] = useState(0.28);
   const [standalone, setStandalone] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const airline = getAirline(airlineId);
   const positions = getPositionsForAirline(airlineId);
@@ -209,21 +210,27 @@ function App() {
             Descargar bloqueo + inicio
           </button>
 
-          <div className="panel-section qr-section">
-            <h2>Abrir en otro dispositivo</h2>
-            <p className="qr-desc">Escanea el código QR con la cámara de otro celular</p>
-            <div className="qr-wrap">
-              <QRCodeSVG
-                value={appUrl}
-                size={168}
-                bgColor="#ffffff"
-                fgColor="#0b0f19"
-                level="M"
-                marginSize={2}
-              />
+          <details
+            className="qr-collapsible"
+            open={qrOpen}
+            onToggle={(e) => setQrOpen(e.currentTarget.open)}
+          >
+            <summary className="qr-summary">Abrir en otro dispositivo</summary>
+            <div className="qr-content">
+              <p className="qr-desc">Escanea el código QR con la cámara de otro celular</p>
+              <div className="qr-wrap">
+                <QRCodeSVG
+                  value={appUrl}
+                  size={168}
+                  bgColor="#ffffff"
+                  fgColor="#0b0f19"
+                  level="M"
+                  marginSize={2}
+                />
+              </div>
+              <p className="qr-url">{appUrl}</p>
             </div>
-            <p className="qr-url">{appUrl}</p>
-          </div>
+          </details>
         </section>
 
         <section className="preview-area">
