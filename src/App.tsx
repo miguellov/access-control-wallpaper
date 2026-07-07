@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { getAppUrl } from './lib/appUrl';
 import { DEFAULT_DEVICE_ID, DEVICES } from './lib/resolutions';
 import { getPositionsForAirline, DEFAULT_POSITION, type Position } from './lib/positions';
 import { AIRLINES, DEFAULT_AIRLINE_ID, getAirline, type AirlineId } from './lib/airlines';
@@ -109,11 +110,7 @@ function App() {
 
   const activeType = WALLPAPER_TYPES.find((t) => t.id === wallpaperType);
 
-  const appUrl = useMemo(() => {
-    const base = import.meta.env.BASE_URL;
-    const path = base.endsWith('/') ? base.slice(0, -1) : base;
-    return `${window.location.origin}${path}`;
-  }, []);
+  const appUrl = getAppUrl();
 
   return (
     <div className={`app${standalone ? ' app--standalone' : ''}`}>
