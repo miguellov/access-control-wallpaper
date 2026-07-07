@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { DEFAULT_DEVICE_ID, DEVICES } from './lib/resolutions';
 import { getPositionsForAirline, DEFAULT_POSITION, type Position } from './lib/positions';
 import { AIRLINES, DEFAULT_AIRLINE_ID, getAirline, type AirlineId } from './lib/airlines';
@@ -108,6 +109,12 @@ function App() {
 
   const activeType = WALLPAPER_TYPES.find((t) => t.id === wallpaperType);
 
+  const appUrl = useMemo(() => {
+    const base = import.meta.env.BASE_URL;
+    const path = base.endsWith('/') ? base.slice(0, -1) : base;
+    return `${window.location.origin}${path}`;
+  }, []);
+
   return (
     <div className={`app${standalone ? ' app--standalone' : ''}`}>
       <header className="header">
@@ -204,6 +211,22 @@ function App() {
           >
             Descargar bloqueo + inicio
           </button>
+
+          <div className="panel-section qr-section">
+            <h2>Abrir en otro dispositivo</h2>
+            <p className="qr-desc">Escanea el código QR con la cámara de otro celular</p>
+            <div className="qr-wrap">
+              <QRCodeSVG
+                value={appUrl}
+                size={168}
+                bgColor="#ffffff"
+                fgColor="#0b0f19"
+                level="M"
+                marginSize={2}
+              />
+            </div>
+            <p className="qr-url">{appUrl}</p>
+          </div>
         </section>
 
         <section className="preview-area">

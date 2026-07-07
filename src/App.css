@@ -300,6 +300,37 @@
   line-height: 1.4;
 }
 
+.qr-section {
+  text-align: center;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--input-bg);
+}
+
+.qr-desc {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.qr-wrap {
+  display: inline-flex;
+  padding: 0.65rem;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.qr-url {
+  margin: 0.75rem 0 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
 @media (max-width: 360px) {
   .position-grid {
     grid-template-columns: 1fr;
