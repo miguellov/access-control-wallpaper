@@ -1,6 +1,6 @@
 import type { AirlineId } from './airlines';
 
-const SHARED_POSITIONS = [
+const WESTJET_POSITIONS = [
   'OBS MAKEUP',
   'CIERRE COUNTER',
   'GATE',
@@ -12,14 +12,23 @@ const SHARED_POSITIONS = [
   'ADUANA',
 ] as const;
 
-const JETBLUE_POSITIONS = [...SHARED_POSITIONS, 'CONTROL 5X5'] as const;
+const JETBLUE_POSITIONS = [
+  'OBS MAKEUP',
+  'PUERTA 1',
+  'PUERTA 2',
+  'RAMPA 1',
+  'RAMPA 2',
+  'OBSERVER RAMPA',
+  'ADUANA',
+  'CONTROL 5X5',
+] as const;
 
 export const POSITIONS_BY_AIRLINE: Record<AirlineId, readonly string[]> = {
-  westjet: SHARED_POSITIONS,
+  westjet: WESTJET_POSITIONS,
   jetblue: JETBLUE_POSITIONS,
 };
 
-export type Position = (typeof JETBLUE_POSITIONS)[number];
+export type Position = (typeof WESTJET_POSITIONS)[number] | (typeof JETBLUE_POSITIONS)[number];
 
 export function getPositionsForAirline(airlineId: AirlineId): readonly string[] {
   return POSITIONS_BY_AIRLINE[airlineId];
