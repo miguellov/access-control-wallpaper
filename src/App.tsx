@@ -4,6 +4,7 @@ import { getPositionsForAirline, DEFAULT_POSITION, type Position } from './lib/p
 import { AIRLINES, DEFAULT_AIRLINE_ID, getAirline, type AirlineId } from './lib/airlines';
 import { WALLPAPER_TYPES, type WallpaperType } from './lib/wallpaperTypes';
 import { downloadWallpaper, renderWallpaper } from './lib/wallpaperEngine';
+import { detectBestDeviceId, getPreviewScale, isMobileDevice, isStandaloneApp } from './lib/mobile';
 import './App.css';
 
 function App() {
@@ -13,14 +14,33 @@ function App() {
   const [wallpaperType, setWallpaperType] = useState<WallpaperType>('lock');
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE_ID);
   const [loading, setLoading] = useState(true);
+  const [previewScale, setPreviewScale] = useState(0.28);
+  const [standalone, setStandalone] = useState(false);
 
   const airline = getAirline(airlineId);
   const positions = getPositionsForAirline(airlineId);
   const device = DEVICES.find((d) => d.id === deviceId) ?? DEVICES[0];
 
-  const previewScale = 0.28;
   const previewW = Math.round(device.width * previewScale);
   const previewH = Math.round(device.height * previewScale);
+
+  useEffect(() => {
+    if (isMobileDevice()) {
+      setDeviceId(detectBestDeviceId());
+    }
+    setStandalone(isStandaloneApp());
+  }, []);
+
+  useEffect(() => {
+    const updatePreviewScale = () => setPreviewScale(getPreviewScale(device.width));
+    updatePreviewScale();
+    window.addEventListener('resize', updatePreviewScale);
+    window.addEventListener('orientationchange', updatePreviewScale);
+    return () => {
+      window.removeEventListener('resize', updatePreviewScale);
+      window.removeEventListener('orientationchange', updatePreviewScale);
+    };
+  }, [device.width]);
 
   const draw = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -44,6 +64,9 @@ function App() {
     root.style.setProperty('--accent', airline.accent);
     root.style.setProperty('--accent-bg', airline.accentBg);
     root.style.setProperty('--accent-border', airline.accentBorder);
+
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', airline.accent);
   }, [airline]);
 
   const handleAirlineChange = (id: AirlineId) => {
@@ -86,7 +109,7 @@ function App() {
   const activeType = WALLPAPER_TYPES.find((t) => t.id === wallpaperType);
 
   return (
-    <div className="app">
+    <div className={`app${standalone ? ' app--standalone' : ''}`}>
       <header className="header">
         <div className="header-brand">
           <img src={airline.logo} alt={airline.name} className="header-logo" />
