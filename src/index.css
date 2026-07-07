@@ -37,20 +37,16 @@
 }
 
 html {
-  height: 100%;
-  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100%;
   min-height: 100dvh;
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: manipulation;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 #root {
-  min-height: 100%;
   min-height: 100dvh;
 }
