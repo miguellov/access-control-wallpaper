@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEVICE_ID, DEVICES } from './lib/resolutions';
-import { POSITIONS, type Position } from './lib/positions';
+import { getPositionsForAirline, DEFAULT_POSITION, type Position } from './lib/positions';
 import { AIRLINES, DEFAULT_AIRLINE_ID, getAirline, type AirlineId } from './lib/airlines';
 import { WALLPAPER_TYPES, type WallpaperType } from './lib/wallpaperTypes';
 import { downloadWallpaper, renderWallpaper } from './lib/wallpaperEngine';
@@ -9,12 +9,13 @@ import './App.css';
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [airlineId, setAirlineId] = useState<AirlineId>(DEFAULT_AIRLINE_ID);
-  const [position, setPosition] = useState<Position>('OBS MAKEUP');
+  const [position, setPosition] = useState<Position>(DEFAULT_POSITION);
   const [wallpaperType, setWallpaperType] = useState<WallpaperType>('lock');
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE_ID);
   const [loading, setLoading] = useState(true);
 
   const airline = getAirline(airlineId);
+  const positions = getPositionsForAirline(airlineId);
   const device = DEVICES.find((d) => d.id === deviceId) ?? DEVICES[0];
 
   const previewScale = 0.28;
@@ -44,6 +45,14 @@ function App() {
     root.style.setProperty('--accent-bg', airline.accentBg);
     root.style.setProperty('--accent-border', airline.accentBorder);
   }, [airline]);
+
+  const handleAirlineChange = (id: AirlineId) => {
+    setAirlineId(id);
+    const nextPositions = getPositionsForAirline(id);
+    if (!nextPositions.includes(position)) {
+      setPosition(DEFAULT_POSITION);
+    }
+  };
 
   const handleDownload = async () => {
     const offscreen = document.createElement('canvas');
@@ -98,7 +107,7 @@ function App() {
                   key={a.id}
                   type="button"
                   className={`airline-btn ${airlineId === a.id ? 'active' : ''}`}
-                  onClick={() => setAirlineId(a.id)}
+                  onClick={() => handleAirlineChange(a.id)}
                 >
                   <img src={a.logo} alt={a.name} className="airline-btn-logo" />
                   <span>{a.name}</span>
@@ -127,12 +136,12 @@ function App() {
           <div className="panel-section">
             <h2>Posición</h2>
             <div className="position-grid">
-              {POSITIONS.map((pos) => (
+              {positions.map((pos) => (
                 <button
                   key={pos}
                   type="button"
                   className={`position-btn ${position === pos ? 'active' : ''}`}
-                  onClick={() => setPosition(pos)}
+                  onClick={() => setPosition(pos as Position)}
                 >
                   {pos}
                 </button>
