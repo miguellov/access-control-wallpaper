@@ -1,12 +1,15 @@
 import { loadAssets } from './imageAssets';
-import { getAirline, type AirlineId } from './airlines';
+import { getAirline } from './airlines';
+import type { CustomAirline } from './configStore';
 import type { AirlineTheme } from './airlines';
 import type { WallpaperType } from './wallpaperTypes';
 
 export interface WallpaperData {
   position: string;
   type: WallpaperType;
-  airlineId: AirlineId;
+  airlineId: string;
+  serial?: string;
+  customAirlines?: CustomAirline[];
 }
 
 const BASE_WIDTH = 1080;
@@ -177,6 +180,69 @@ function drawPositionText(
   ctx.shadowOffsetY = 0;
 }
 
+function drawSerialText(
+  ctx: CanvasRenderingContext2D,
+  serial: string,
+  w: number,
+  y: number,
+  scale: number,
+  theme: AirlineTheme,
+) {
+  const label = `S/N ${serial}`;
+  const fontSize = 42 * scale;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 ${fontSize}px "Consolas", "Segoe UI", monospace`;
+  ctx.letterSpacing = `${4 * scale}px`;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+  ctx.shadowBlur = 18 * scale;
+  ctx.shadowOffsetY = 3 * scale;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.lineWidth = 6 * scale;
+  ctx.strokeText(label, w / 2, y);
+  ctx.fillStyle = theme.positionColor;
+  ctx.fillText(label, w / 2, y);
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+}
+
+function drawSerialBadge(
+  ctx: CanvasRenderingContext2D,
+  serial: string,
+  w: number,
+  h: number,
+  scale: number,
+  theme: AirlineTheme,
+) {
+  const label = `S/N ${serial}`;
+  const fontSize = 32 * scale;
+  const paddingX = 20 * scale;
+  const paddingY = 12 * scale;
+
+  ctx.font = `700 ${fontSize}px "Consolas", "Segoe UI", monospace`;
+  ctx.letterSpacing = `${3 * scale}px`;
+  const textWidth = ctx.measureText(label).width;
+  const badgeW = textWidth + paddingX * 2;
+  const badgeH = fontSize + paddingY * 2;
+  const x = w - badgeW - 24 * scale;
+  const y = h - badgeH - 48 * scale;
+
+  ctx.fillStyle = `rgba(${theme.overlayRgb}, 0.7)`;
+  ctx.fillRect(x, y, badgeW, badgeH);
+  ctx.strokeStyle = theme.borderAccent;
+  ctx.lineWidth = 3 * scale;
+  ctx.strokeRect(x, y, badgeW, badgeH);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+  ctx.shadowBlur = 12 * scale;
+  ctx.fillStyle = theme.positionColor;
+  ctx.fillText(label, x + badgeW / 2, y + badgeH / 2);
+  ctx.shadowBlur = 0;
+}
+
 function drawLogo(
   ctx: CanvasRenderingContext2D,
   logo: HTMLImageElement,
@@ -219,7 +285,7 @@ function drawLockScreen(
 
   ctx.textAlign = 'center';
 
-  const logoWidth = 200 * scale * theme.logoLockScale;
+  const logoWidth = 235 * scale * theme.logoLockScale;
   const logoHeight = (logo.height / logo.width) * logoWidth;
   const logoX = (w - logoWidth) / 2;
   const logoY = h * 0.14;
@@ -227,16 +293,20 @@ function drawLockScreen(
   drawLogo(ctx, logo, logoX, logoY, logoWidth, logoHeight, theme);
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  ctx.font = `600 ${20 * scale}px "Segoe UI", system-ui, sans-serif`;
-  ctx.letterSpacing = `${10 * scale}px`;
+  ctx.font = `600 ${28 * scale}px "Segoe UI", system-ui, sans-serif`;
+  ctx.letterSpacing = `${12 * scale}px`;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-  ctx.shadowBlur = 12 * scale;
+  ctx.shadowBlur = 14 * scale;
   ctx.shadowOffsetY = 2 * scale;
-  ctx.fillText('ACCESS CONTROL', w / 2, logoY - 24 * scale);
+  ctx.fillText('ACCESS CONTROL', w / 2, logoY - 28 * scale);
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
 
-  drawPositionText(ctx, data.position, w, h * 0.58, scale, theme);
+  drawPositionText(ctx, data.position, w, h * 0.56, scale, theme);
+
+  if (data.serial) {
+    drawSerialText(ctx, data.serial, w, h * 0.72, scale, theme);
+  }
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
   ctx.font = `400 ${15 * scale}px "Segoe UI", system-ui, sans-serif`;
@@ -257,7 +327,7 @@ function drawHomeScreen(
   drawCoverImage(ctx, bg, w, h);
   drawHomeOverlay(ctx, w, h, theme);
 
-  const logoWidth = 120 * scale * theme.logoHomeScale;
+  const logoWidth = 140 * scale * theme.logoHomeScale;
   const logoHeight = (logo.height / logo.width) * logoWidth;
   const logoX = (w - logoWidth) / 2;
   const logoY = h * 0.06;
@@ -265,6 +335,10 @@ function drawHomeScreen(
   drawLogo(ctx, logo, logoX, logoY, logoWidth, logoHeight, theme, true);
 
   drawVerticalPositionText(ctx, data.position, w, h, scale, theme);
+
+  if (data.serial) {
+    drawSerialBadge(ctx, data.serial, w, h, scale, theme);
+  }
 }
 
 export async function renderWallpaper(
@@ -276,8 +350,8 @@ export async function renderWallpaper(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const theme = getAirline(data.airlineId);
-  const { bg, logo } = await loadAssets(data.airlineId);
+  const theme = getAirline(data.airlineId, data.customAirlines);
+  const { bg, logo } = await loadAssets(data.airlineId, data.customAirlines);
 
   canvas.width = width;
   canvas.height = height;

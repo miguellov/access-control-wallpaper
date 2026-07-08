@@ -1,4 +1,5 @@
-import { getAirline, type AirlineId } from './airlines';
+import { getAirline } from './airlines';
+import type { CustomAirline } from './configStore';
 
 export interface ImageAssets {
   bg: HTMLImageElement;
@@ -14,18 +15,26 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-const cache = new Map<AirlineId, Promise<ImageAssets>>();
+const cache = new Map<string, Promise<ImageAssets>>();
 
-export function loadAssets(airlineId: AirlineId): Promise<ImageAssets> {
-  const cached = cache.get(airlineId);
+export function clearAssetCache(): void {
+  cache.clear();
+}
+
+export function loadAssets(
+  airlineId: string,
+  customAirlines: CustomAirline[] = [],
+): Promise<ImageAssets> {
+  const airline = getAirline(airlineId, customAirlines);
+  const cacheKey = `${airlineId}:${airline.bg}:${airline.logo}`;
+  const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const airline = getAirline(airlineId);
   const promise = Promise.all([loadImage(airline.bg), loadImage(airline.logo)]).then(([bg, logo]) => ({
     bg,
     logo,
   }));
 
-  cache.set(airlineId, promise);
+  cache.set(cacheKey, promise);
   return promise;
 }
