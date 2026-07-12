@@ -11,6 +11,7 @@ import {
   type CustomAirline,
   type CustomPosition,
 } from '../lib/configStore';
+import type { PositionTemplateId } from '../lib/positionTemplates';
 
 export function useCustomConfig() {
   const [config, setConfig] = useState<AppCustomConfig>(loadCustomConfig);
@@ -22,7 +23,7 @@ export function useCustomConfig() {
   }, []);
 
   const addAirline = useCallback(
-    (airline: Omit<CustomAirline, 'id'> & { id?: string }) => {
+    (airline: Omit<CustomAirline, 'id'> & { id?: string; templateId?: PositionTemplateId }) => {
       const next = addCustomAirline(config, airline);
       persist(next);
       return next.customAirlines[next.customAirlines.length - 1]?.id;

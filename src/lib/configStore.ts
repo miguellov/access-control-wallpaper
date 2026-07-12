@@ -1,8 +1,14 @@
+import {
+  DEFAULT_POSITION_TEMPLATE_ID,
+  getTemplatePositions,
+  type PositionTemplateId,
+} from './positionTemplates';
+
 const STORAGE_KEY = 'ac-wallpaper-custom-config';
 
 export interface CustomPosition {
   name: string;
-  serial?: string;
+  imei?: string;
 }
 
 export interface CustomAirline {
@@ -58,13 +64,16 @@ export function normalizePositionName(name: string): string {
   return name.trim().replace(/\s+/g, ' ').toUpperCase();
 }
 
-export function normalizeSerial(serial: string): string {
-  return serial.trim().toUpperCase();
+export function normalizeImei(imei: string): string {
+  return imei.trim().replace(/\s+/g, '');
 }
 
 export function addCustomAirline(
   config: AppCustomConfig,
-  airline: Omit<CustomAirline, 'id'> & { id?: string },
+  airline: Omit<CustomAirline, 'id'> & {
+    id?: string;
+    templateId?: PositionTemplateId;
+  },
 ): AppCustomConfig {
   const entry: CustomAirline = {
     id: airline.id ?? createAirlineId(airline.name),
@@ -73,10 +82,16 @@ export function addCustomAirline(
     bgDataUrl: airline.bgDataUrl,
     logoDataUrl: airline.logoDataUrl,
   };
+  const templateId = airline.templateId ?? DEFAULT_POSITION_TEMPLATE_ID;
+  const starterPositions = getTemplatePositions(templateId).map((name) => ({ name }));
+
   return {
     ...config,
     customAirlines: [...config.customAirlines, entry],
-    extraPositions: { ...config.extraPositions, [entry.id]: config.extraPositions[entry.id] ?? [] },
+    extraPositions: {
+      ...config.extraPositions,
+      [entry.id]: config.extraPositions[entry.id] ?? starterPositions,
+    },
   };
 }
 
@@ -96,7 +111,7 @@ export function addCustomPosition(
   const name = normalizePositionName(position.name);
   if (!name) return config;
 
-  const serial = position.serial ? normalizeSerial(position.serial) : undefined;
+  const imei = position.imei ? normalizeImei(position.imei) : undefined;
   const current = config.extraPositions[airlineId] ?? [];
   if (current.some((p) => p.name === name)) return config;
 
@@ -104,7 +119,7 @@ export function addCustomPosition(
     ...config,
     extraPositions: {
       ...config.extraPositions,
-      [airlineId]: [...current, { name, serial }],
+      [airlineId]: [...current, { name, imei }],
     },
   };
 }

@@ -1,19 +1,28 @@
 import {
   createDeviceId,
   DEFAULT_INVENTORY,
+  normalizeDeviceStatus,
   type DeviceStatus,
   type InventoryDevice,
 } from './inventory';
-import { normalizePositionName, normalizeSerial } from './configStore';
+import { normalizePositionName, normalizeImei } from './configStore';
 
-const STORAGE_KEY = 'ac-wallpaper-inventory';
+const STORAGE_KEY = 'ac-wallpaper-inventory-v3';
+
+function migrateInventory(devices: InventoryDevice[]): InventoryDevice[] {
+  return devices.map((d) => ({
+    ...d,
+    status: normalizeDeviceStatus(d.status as string),
+  }));
+}
 
 export function loadInventory(): InventoryDevice[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [...DEFAULT_INVENTORY];
     const parsed = JSON.parse(raw) as InventoryDevice[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_INVENTORY];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [...DEFAULT_INVENTORY];
+    return migrateInventory(parsed);
   } catch {
     return [...DEFAULT_INVENTORY];
   }
@@ -40,7 +49,7 @@ export function reassignDevice(
 export function updateDevice(
   inventory: InventoryDevice[],
   deviceId: string,
-  updates: Partial<Pick<InventoryDevice, 'position' | 'serial' | 'model' | 'status' | 'airlineId'>>,
+  updates: Partial<Pick<InventoryDevice, 'position' | 'imei' | 'model' | 'status' | 'airlineId'>>,
 ): InventoryDevice[] {
   return inventory.map((d) => {
     if (d.id !== deviceId) return d;
@@ -48,7 +57,8 @@ export function updateDevice(
       ...d,
       ...updates,
       position: updates.position ? normalizePositionName(updates.position) : d.position,
-      serial: updates.serial !== undefined ? normalizeSerial(updates.serial) : d.serial,
+      imei: updates.imei !== undefined ? normalizeImei(updates.imei) : d.imei,
+      status: updates.status !== undefined ? normalizeDeviceStatus(updates.status) : d.status,
     };
   });
 }
@@ -61,9 +71,9 @@ export function addDevice(
     id: device.id ?? createDeviceId(),
     airlineId: device.airlineId,
     position: normalizePositionName(device.position),
-    serial: device.serial ? normalizeSerial(device.serial) : '',
+    imei: device.imei ? normalizeImei(device.imei) : '',
     model: device.model.trim() || 'Galaxy A16',
-    status: device.status,
+    status: normalizeDeviceStatus(device.status),
   };
   return [...inventory, entry];
 }
@@ -75,7 +85,7 @@ export function removeDevice(inventory: InventoryDevice[], deviceId: string): In
 export interface NewDeviceInput {
   airlineId: string;
   position: string;
-  serial?: string;
+  imei?: string;
   model: string;
   status: DeviceStatus;
 }
@@ -84,8 +94,8 @@ export function createDeviceFromInput(input: NewDeviceInput): Omit<InventoryDevi
   return {
     airlineId: input.airlineId,
     position: normalizePositionName(input.position),
-    serial: input.serial ? normalizeSerial(input.serial) : '',
+    imei: input.imei ? normalizeImei(input.imei) : '',
     model: input.model.trim() || 'Galaxy A16',
-    status: input.status,
+    status: normalizeDeviceStatus(input.status),
   };
 }

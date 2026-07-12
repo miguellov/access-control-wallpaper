@@ -8,7 +8,7 @@ export interface WallpaperData {
   position: string;
   type: WallpaperType;
   airlineId: string;
-  serial?: string;
+  imei?: string;
   customAirlines?: CustomAirline[];
 }
 
@@ -88,6 +88,7 @@ function drawVerticalPositionText(
   h: number,
   scale: number,
   theme: AirlineTheme,
+  imei?: string,
 ) {
   const maxLength = h * 0.78;
   let fontSize = 220 * scale;
@@ -101,9 +102,25 @@ function drawVerticalPositionText(
   }
 
   const textWidth = ctx.measureText(upper).width;
-  const barW = fontSize * 1.55;
+  let barW = fontSize * 1.55;
   const centerX = w * 0.5;
   const centerY = h * 0.48;
+
+  let imeiSize = 0;
+  let imeiLabel = '';
+  if (imei) {
+    imeiLabel = `IMEI ${imei}`;
+    imeiSize = Math.min(48 * scale, fontSize * 0.28);
+    const imeiMaxWidth = textWidth * 0.98;
+    ctx.font = `700 ${imeiSize}px "Consolas", "Segoe UI", monospace`;
+    ctx.letterSpacing = `${1.5 * scale}px`;
+    while (ctx.measureText(imeiLabel).width > imeiMaxWidth && imeiSize > 22 * scale) {
+      imeiSize -= 1 * scale;
+      ctx.font = `700 ${imeiSize}px "Consolas", "Segoe UI", monospace`;
+    }
+    // Extra room on the dark bar for the IMEI under the letters.
+    barW += imeiSize * 1.85 + 20 * scale;
+  }
 
   ctx.save();
   ctx.translate(centerX, centerY);
@@ -111,6 +128,7 @@ function drawVerticalPositionText(
 
   const barX = -textWidth / 2 - fontSize * 0.25;
   const barH = barW;
+  const letterY = imei ? -(imeiSize * 0.45) : 0;
 
   ctx.fillStyle = `rgba(${theme.overlayRgb}, 0.55)`;
   ctx.fillRect(barX, -barH / 2, textWidth + fontSize * 0.5, barH);
@@ -121,15 +139,32 @@ function drawVerticalPositionText(
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.font = `900 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+  ctx.letterSpacing = `${4 * scale}px`;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
   ctx.shadowBlur = 28 * scale;
   ctx.shadowOffsetX = 5 * scale;
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
   ctx.lineWidth = 8 * scale;
-  ctx.strokeText(upper, 0, 0);
+  ctx.strokeText(upper, 0, letterY);
 
   ctx.fillStyle = theme.positionColor;
-  ctx.fillText(upper, 0, 0);
+  ctx.fillText(upper, 0, letterY);
+
+  if (imei) {
+    const imeiY = barH / 2 - imeiSize * 0.75;
+
+    ctx.font = `700 ${imeiSize}px "Consolas", "Segoe UI", monospace`;
+    ctx.letterSpacing = `${1.2 * scale}px`;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 10 * scale;
+    ctx.shadowOffsetX = 2 * scale;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.lineWidth = 3.5 * scale;
+    ctx.strokeText(imeiLabel, 0, imeiY);
+    ctx.fillStyle = theme.positionColor;
+    ctx.fillText(imeiLabel, 0, imeiY);
+  }
 
   ctx.restore();
 }
@@ -180,67 +215,38 @@ function drawPositionText(
   ctx.shadowOffsetY = 0;
 }
 
-function drawSerialText(
+function drawImeiText(
   ctx: CanvasRenderingContext2D,
-  serial: string,
+  imei: string,
   w: number,
   y: number,
   scale: number,
   theme: AirlineTheme,
 ) {
-  const label = `S/N ${serial}`;
-  const fontSize = 42 * scale;
+  const label = `IMEI ${imei}`;
+  let fontSize = 48 * scale;
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `700 ${fontSize}px "Consolas", "Segoe UI", monospace`;
-  ctx.letterSpacing = `${4 * scale}px`;
+  ctx.letterSpacing = `${2 * scale}px`;
+
+  const maxWidth = w * 0.92;
+  while (ctx.measureText(label).width > maxWidth && fontSize > 28 * scale) {
+    fontSize -= 2 * scale;
+    ctx.font = `700 ${fontSize}px "Consolas", "Segoe UI", monospace`;
+  }
+
   ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-  ctx.shadowBlur = 18 * scale;
+  ctx.shadowBlur = 20 * scale;
   ctx.shadowOffsetY = 3 * scale;
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
-  ctx.lineWidth = 6 * scale;
+  ctx.lineWidth = 7 * scale;
   ctx.strokeText(label, w / 2, y);
   ctx.fillStyle = theme.positionColor;
   ctx.fillText(label, w / 2, y);
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
-}
-
-function drawSerialBadge(
-  ctx: CanvasRenderingContext2D,
-  serial: string,
-  w: number,
-  h: number,
-  scale: number,
-  theme: AirlineTheme,
-) {
-  const label = `S/N ${serial}`;
-  const fontSize = 32 * scale;
-  const paddingX = 20 * scale;
-  const paddingY = 12 * scale;
-
-  ctx.font = `700 ${fontSize}px "Consolas", "Segoe UI", monospace`;
-  ctx.letterSpacing = `${3 * scale}px`;
-  const textWidth = ctx.measureText(label).width;
-  const badgeW = textWidth + paddingX * 2;
-  const badgeH = fontSize + paddingY * 2;
-  const x = w - badgeW - 24 * scale;
-  const y = h - badgeH - 48 * scale;
-
-  ctx.fillStyle = `rgba(${theme.overlayRgb}, 0.7)`;
-  ctx.fillRect(x, y, badgeW, badgeH);
-  ctx.strokeStyle = theme.borderAccent;
-  ctx.lineWidth = 3 * scale;
-  ctx.strokeRect(x, y, badgeW, badgeH);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-  ctx.shadowBlur = 12 * scale;
-  ctx.fillStyle = theme.positionColor;
-  ctx.fillText(label, x + badgeW / 2, y + badgeH / 2);
-  ctx.shadowBlur = 0;
 }
 
 function drawLogo(
@@ -304,8 +310,8 @@ function drawLockScreen(
 
   drawPositionText(ctx, data.position, w, h * 0.56, scale, theme);
 
-  if (data.serial) {
-    drawSerialText(ctx, data.serial, w, h * 0.72, scale, theme);
+  if (data.imei) {
+    drawImeiText(ctx, data.imei, w, h * 0.72, scale, theme);
   }
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -334,11 +340,7 @@ function drawHomeScreen(
 
   drawLogo(ctx, logo, logoX, logoY, logoWidth, logoHeight, theme, true);
 
-  drawVerticalPositionText(ctx, data.position, w, h, scale, theme);
-
-  if (data.serial) {
-    drawSerialBadge(ctx, data.serial, w, h, scale, theme);
-  }
+  drawVerticalPositionText(ctx, data.position, w, h, scale, theme, data.imei);
 }
 
 export async function renderWallpaper(

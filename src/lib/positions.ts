@@ -1,17 +1,22 @@
 import type { AppCustomConfig } from './configStore';
 import type { InventoryDevice } from './inventory';
 import { getInventoryPositions } from './inventory';
+import { isCustomAirline } from './airlines';
+import { getTemplatePositions } from './positionTemplates';
 
 const WESTJET_POSITIONS = [
   'OBS MAKEUP',
-  'CIERRE COUNTER',
-  'GATE',
   'PUERTA 1',
   'PUERTA 2',
   'RAMPA 1',
   'RAMPA 2',
-  'OBSERVER RAMPA',
-  'ADUANA',
+  'OBS RAMPA',
+  'CIERRE COUNTER',
+  'GATE',
+  '5X5 B6',
+  'OBS MAKEUP (2)',
+  'PUERTA 2 (2)',
+  'ADUANA B6',
 ] as const;
 
 const JETBLUE_POSITIONS = [
@@ -42,6 +47,13 @@ export const POSITIONS_BY_AIRLINE: Record<string, readonly string[]> = {
 
 export const DEFAULT_POSITION = 'OBS MAKEUP';
 
+export const CUSTOM_AIRLINE_STARTER_POSITIONS = getTemplatePositions('standard');
+
+export function resolvePosition(available: string[], current: string): string {
+  if (current && available.includes(current)) return current;
+  return available[0] ?? '';
+}
+
 export function getBuiltinPositions(airlineId: string): readonly string[] {
   return POSITIONS_BY_AIRLINE[airlineId] ?? [];
 }
@@ -62,6 +74,10 @@ export function getPositionsForAirline(
       seen.add(name);
       merged.push(name);
     }
+  }
+
+  if (merged.length === 0 && isCustomAirline(airlineId)) {
+    return [...CUSTOM_AIRLINE_STARTER_POSITIONS];
   }
 
   return merged;

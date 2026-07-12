@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import type { AirlineTheme } from '../lib/airlines';
-import type { InventoryDevice } from '../lib/inventory';
+import {
+  DEVICE_STATUS_OPTIONS,
+  isDeviceAvailable,
+  type InventoryDevice,
+} from '../lib/inventory';
 import { groupInventoryByAirline } from '../lib/inventory';
 import type { NewDeviceInput } from '../lib/inventoryStore';
 
@@ -10,7 +14,7 @@ interface InventoryPanelProps {
   onReassign: (deviceId: string, newAirlineId: string) => void;
   onUpdate: (
     deviceId: string,
-    updates: Partial<Pick<InventoryDevice, 'position' | 'serial' | 'model' | 'status'>>,
+    updates: Partial<Pick<InventoryDevice, 'position' | 'imei' | 'model' | 'status'>>,
   ) => void;
   onAdd: (input: NewDeviceInput) => void;
   onRemove: (deviceId: string) => void;
@@ -71,7 +75,7 @@ export function InventoryPanel({
             <div className="inventory-table">
               <div className="inventory-row inventory-row--head">
                 <span>Modelo</span>
-                <span>Serial</span>
+                <span>IMEI</span>
                 <span>Posición</span>
                 <span>Estado</span>
                 <span>Reasignar</span>
@@ -116,13 +120,28 @@ function InventoryRow({
   onRemove,
   onSelectForWallpaper,
 }: InventoryRowProps) {
-  const serialLabel =
-    device.status === 'inoperative' ? 'INOPERATIVO' : device.serial || '—';
+  const rowClass =
+    device.status === 'inoperative'
+      ? ' inventory-row--inactive'
+      : device.status === 'repair'
+        ? ' inventory-row--repair'
+        : '';
 
   return (
-    <div className={`inventory-row${device.status === 'inoperative' ? ' inventory-row--inactive' : ''}`}>
+    <div className={`inventory-row${rowClass}`}>
       <span className="inventory-cell inventory-cell--model">{device.model}</span>
-      <span className="inventory-cell inventory-cell--serial">{serialLabel}</span>
+      {device.status === 'inoperative' ? (
+        <span className="inventory-cell inventory-cell--serial">INOPERATIVO</span>
+      ) : (
+        <input
+          className="inventory-cell-input inventory-cell--serial"
+          value={device.imei}
+          onChange={(e) => onUpdate(device.id, { imei: e.target.value })}
+          placeholder="IMEI"
+          aria-label="IMEI"
+          inputMode="numeric"
+        />
+      )}
       <input
         className="inventory-cell-input"
         value={device.position}
@@ -130,13 +149,16 @@ function InventoryRow({
         aria-label="Posición"
       />
       <select
-        className="inventory-cell-select"
+        className={`inventory-cell-select status-select status-select--${device.status}`}
         value={device.status}
         onChange={(e) => onUpdate(device.id, { status: e.target.value as InventoryDevice['status'] })}
         aria-label="Estado"
       >
-        <option value="active">Activo</option>
-        <option value="inoperative">Inoperativo</option>
+        {DEVICE_STATUS_OPTIONS.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {opt.label}
+          </option>
+        ))}
       </select>
       <select
         className="inventory-cell-select inventory-cell-select--airline"
@@ -151,7 +173,7 @@ function InventoryRow({
         ))}
       </select>
       <div className="inventory-row-actions">
-        {onSelectForWallpaper && device.status === 'active' && (
+        {onSelectForWallpaper && isDeviceAvailable(device.status) && (
           <button
             type="button"
             className="inventory-action-btn"
@@ -183,16 +205,17 @@ function AddInventoryDeviceForm({
 }) {
   const [airlineId, setAirlineId] = useState(airlines[0]?.id ?? 'westjet');
   const [position, setPosition] = useState('');
-  const [serial, setSerial] = useState('');
+  const [imei, setImei] = useState('');
   const [model, setModel] = useState('Galaxy A16');
-  const [status, setStatus] = useState<InventoryDevice['status']>('active');
+  const [status, setStatus] = useState<InventoryDevice['status']>('available');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!position.trim()) return;
-    onAdd({ airlineId, position, serial, model, status });
+    onAdd({ airlineId, position, imei, model, status });
     setPosition('');
-    setSerial('');
+    setImei('');
+    setStatus('available');
   };
 
   return (
@@ -219,12 +242,13 @@ function AddInventoryDeviceForm({
           />
         </label>
         <label className="manage-field">
-          <span>Serial</span>
+          <span>IMEI</span>
           <input
             type="text"
-            value={serial}
-            onChange={(e) => setSerial(e.target.value)}
-            placeholder="Ej. R5CY31Q9GZV"
+            value={imei}
+            onChange={(e) => setImei(e.target.value)}
+            placeholder="Ej. 359630140337008"
+            inputMode="numeric"
           />
         </label>
         <label className="manage-field">
@@ -238,9 +262,15 @@ function AddInventoryDeviceForm({
         </label>
         <label className="manage-field">
           <span>Estado</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value as InventoryDevice['status'])}>
-            <option value="active">Activo</option>
-            <option value="inoperative">Inoperativo</option>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as InventoryDevice['status'])}
+          >
+            {DEVICE_STATUS_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </label>
         <button type="submit" className="manage-submit">

@@ -28,7 +28,10 @@ export function useInventory() {
   );
 
   const update = useCallback(
-    (deviceId: string, updates: Partial<Pick<InventoryDevice, 'position' | 'serial' | 'model' | 'status' | 'airlineId'>>) => {
+    (
+      deviceId: string,
+      updates: Partial<Pick<InventoryDevice, 'position' | 'imei' | 'model' | 'status' | 'airlineId'>>,
+    ) => {
       persist(updateDevice(inventory, deviceId, updates));
     },
     [inventory, persist],

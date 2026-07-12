@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { normalizePositionName, normalizeSerial } from '../lib/configStore';
+import { normalizePositionName, normalizeImei } from '../lib/configStore';
 
 interface AddPositionFormProps {
-  onAdd: (position: { name: string; serial?: string }) => void;
+  onAdd: (position: { name: string; imei?: string }) => void;
 }
 
 export function AddPositionForm({ onAdd }: AddPositionFormProps) {
   const [name, setName] = useState('');
-  const [serial, setSerial] = useState('');
+  const [imei, setImei] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
@@ -22,11 +22,11 @@ export function AddPositionForm({ onAdd }: AddPositionFormProps) {
 
     onAdd({
       name: normalizedName,
-      serial: serial.trim() ? normalizeSerial(serial) : undefined,
+      imei: imei.trim() ? normalizeImei(imei) : undefined,
     });
 
     setName('');
-    setSerial('');
+    setImei('');
   };
 
   return (
@@ -43,13 +43,14 @@ export function AddPositionForm({ onAdd }: AddPositionFormProps) {
       </label>
 
       <label className="manage-field">
-        <span>Serial (opcional)</span>
+        <span>IMEI (opcional)</span>
         <input
           type="text"
-          value={serial}
-          onChange={(e) => setSerial(e.target.value)}
-          placeholder="Ej. R5CY31Q9GZV"
+          value={imei}
+          onChange={(e) => setImei(e.target.value)}
+          placeholder="Ej. 359630140337008"
           maxLength={20}
+          inputMode="numeric"
         />
       </label>
 

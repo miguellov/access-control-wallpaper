@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { readFileAsDataUrl } from '../lib/configStore';
+import {
+  DEFAULT_POSITION_TEMPLATE_ID,
+  POSITION_TEMPLATES,
+  type PositionTemplateId,
+} from '../lib/positionTemplates';
 
 interface AddAirlineFormProps {
   onAdd: (airline: {
@@ -7,14 +12,18 @@ interface AddAirlineFormProps {
     accent: string;
     bgDataUrl: string;
     logoDataUrl: string;
+    templateId: PositionTemplateId;
   }) => void;
 }
 
 export function AddAirlineForm({ onAdd }: AddAirlineFormProps) {
   const [name, setName] = useState('');
   const [accent, setAccent] = useState('#0066cc');
+  const [templateId, setTemplateId] = useState<PositionTemplateId>(DEFAULT_POSITION_TEMPLATE_ID);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const selectedTemplate = POSITION_TEMPLATES.find((t) => t.id === templateId);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,10 +58,12 @@ export function AddAirlineForm({ onAdd }: AddAirlineFormProps) {
         accent,
         bgDataUrl,
         logoDataUrl,
+        templateId,
       });
 
       setName('');
       setAccent('#0066cc');
+      setTemplateId(DEFAULT_POSITION_TEMPLATE_ID);
       form.reset();
     } catch {
       setError('No se pudieron cargar las imágenes.');
@@ -78,6 +89,25 @@ export function AddAirlineForm({ onAdd }: AddAirlineFormProps) {
         <span>Color principal</span>
         <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} />
       </label>
+
+      <label className="manage-field">
+        <span>Plantilla de posiciones</span>
+        <select
+          value={templateId}
+          onChange={(e) => setTemplateId(e.target.value as PositionTemplateId)}
+        >
+          {POSITION_TEMPLATES.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {selectedTemplate && (
+        <p className="manage-hint">
+          {selectedTemplate.description}: {selectedTemplate.positions.join(', ')}
+        </p>
+      )}
 
       <label className="manage-field">
         <span>Logo (PNG/JPG)</span>

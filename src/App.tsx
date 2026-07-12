@@ -11,9 +11,10 @@ import {
   getPositionsForAirline,
   getCustomPositionsForAirline,
   isCustomPosition,
+  resolvePosition,
   DEFAULT_POSITION,
 } from './lib/positions';
-import { getSerialForPosition } from './lib/deviceSerials';
+import { getImeiForPosition } from './lib/deviceImeis';
 import { getDevicesForAirline, type InventoryDevice } from './lib/inventory';
 import {
   DEFAULT_AIRLINE_ID,
@@ -22,9 +23,11 @@ import {
   isCustomAirline,
   type AirlineId,
 } from './lib/airlines';
+import type { PositionTemplateId } from './lib/positionTemplates';
 import { WALLPAPER_TYPES, type WallpaperType } from './lib/wallpaperTypes';
 import { downloadWallpaper, renderWallpaper } from './lib/wallpaperEngine';
 import { detectBestDeviceId, getPreviewScale, isMobileDevice, isStandaloneApp } from './lib/mobile';
+import appLogo from './assets/wallpaper-access-logo.png';
 import './App.css';
 
 type AppView = 'wallpaper' | 'inventory';
@@ -55,9 +58,9 @@ function App() {
     ? inventory.find((d) => d.id === selectedDeviceId)
     : undefined;
 
-  const serial =
-    selectedDevice?.serial ||
-    getSerialForPosition(airlineId, position, config, inventory, selectedDeviceId ?? undefined);
+  const imei =
+    selectedDevice?.imei ||
+    getImeiForPosition(airlineId, position, config, inventory, selectedDeviceId ?? undefined);
 
   const positionsWithoutDevice = positions.filter(
     (pos) => !airlineDevices.some((d) => d.position === pos),
@@ -107,7 +110,7 @@ function App() {
         setSelectedDeviceId(firstDevice.id);
         setPosition(firstDevice.position);
       } else {
-        setPosition(positions[0] ?? DEFAULT_POSITION);
+        setPosition(resolvePosition(positions, position));
       }
     }
   }, [positions, position, selectedDevice, airlineDevices]);
@@ -128,14 +131,14 @@ function App() {
         position,
         type: wallpaperType,
         airlineId,
-        serial,
+        imei,
         customAirlines: config.customAirlines,
       },
       previewW,
       previewH,
     );
     setLoading(false);
-  }, [position, wallpaperType, airlineId, serial, config.customAirlines, previewW, previewH]);
+  }, [position, wallpaperType, airlineId, imei, config.customAirlines, previewW, previewH]);
 
   useEffect(() => {
     if (view === 'wallpaper') draw();
@@ -161,9 +164,7 @@ function App() {
       return;
     }
     const nextPositions = getPositionsForAirline(id, config, inventory);
-    if (!nextPositions.includes(position)) {
-      setPosition(nextPositions[0] ?? DEFAULT_POSITION);
-    }
+    setPosition(resolvePosition(nextPositions, position));
   };
 
   const handleAddAirline = (data: {
@@ -171,12 +172,13 @@ function App() {
     accent: string;
     bgDataUrl: string;
     logoDataUrl: string;
+    templateId: PositionTemplateId;
   }) => {
     const newId = addAirline(data);
     if (newId) setAirlineId(newId);
   };
 
-  const handleAddPosition = (data: { name: string; serial?: string }) => {
+  const handleAddPosition = (data: { name: string; imei?: string }) => {
     addPosition(airlineId, data);
     setPosition(data.name);
     setSelectedDeviceId(null);
@@ -206,7 +208,7 @@ function App() {
     deletePosition(airlineId, pos);
     if (position === pos) {
       const remaining = getPositionsForAirline(airlineId, config, inventory).filter((p) => p !== pos);
-      setPosition(remaining[0] ?? DEFAULT_POSITION);
+      setPosition(resolvePosition(remaining, position));
       setSelectedDeviceId(null);
     }
   };
@@ -219,15 +221,15 @@ function App() {
         position,
         type: wallpaperType,
         airlineId,
-        serial,
+        imei,
         customAirlines: config.customAirlines,
       },
       device.width,
       device.height,
     );
     const typeLabel = wallpaperType === 'lock' ? 'bloqueo' : 'inicio';
-    const serialSuffix = serial ? `-${serial.toLowerCase()}` : '';
-    const safeName = `${airline.name}-${typeLabel}-${position}${serialSuffix}`
+    const imeiSuffix = imei ? `-${imei}` : '';
+    const safeName = `${airline.name}-${typeLabel}-${position}${imeiSuffix}`
       .replace(/\s+/g, '-')
       .toLowerCase();
     downloadWallpaper(offscreen, `${safeName}-${device.width}x${device.height}.png`);
@@ -243,15 +245,15 @@ function App() {
           position,
           type,
           airlineId,
-          serial,
+          imei,
           customAirlines: config.customAirlines,
         },
         device.width,
         device.height,
       );
       const typeLabel = type === 'lock' ? 'bloqueo' : 'inicio';
-      const serialSuffix = serial ? `-${serial.toLowerCase()}` : '';
-      const safeName = `${airline.name}-${typeLabel}-${position}${serialSuffix}`
+      const imeiSuffix = imei ? `-${imei}` : '';
+      const safeName = `${airline.name}-${typeLabel}-${position}${imeiSuffix}`
         .replace(/\s+/g, '-')
         .toLowerCase();
       downloadWallpaper(offscreen, `${safeName}-${device.width}x${device.height}.png`);
@@ -266,9 +268,9 @@ function App() {
     <div className={`app${standalone ? ' app--standalone' : ''}`}>
       <header className="header">
         <div className="header-brand">
-          <img src={airline.logo} alt={airline.name} className="header-logo" />
+          <img src={appLogo} alt="Wallpaper Access" className="header-logo header-logo--app" />
           <div>
-            <h1>Access Control</h1>
+            <h1>Wallpaper Access</h1>
             <p>Fondos e inventario · Samsung Galaxy</p>
           </div>
         </div>
@@ -373,8 +375,8 @@ function App() {
                         onClick={() => handleSelectDevice(invDevice)}
                       >
                         <span className="position-btn-label">{invDevice.position}</span>
-                        {invDevice.serial && (
-                          <span className="position-btn-serial">{invDevice.serial}</span>
+                        {invDevice.imei && (
+                          <span className="position-btn-serial">{invDevice.imei}</span>
                         )}
                         <span className="position-btn-model">{invDevice.model}</span>
                       </button>
@@ -382,7 +384,7 @@ function App() {
                   ))}
 
                   {positionsWithoutDevice.map((pos) => {
-                    const posSerial = getSerialForPosition(airlineId, pos, config, inventory);
+                    const posImei = getImeiForPosition(airlineId, pos, config, inventory);
                     const isCustom = isCustomPosition(airlineId, pos, config);
                     const isActive = !selectedDeviceId && position === pos;
                     return (
@@ -396,7 +398,7 @@ function App() {
                           }}
                         >
                           <span className="position-btn-label">{pos}</span>
-                          {posSerial && <span className="position-btn-serial">{posSerial}</span>}
+                          {posImei && <span className="position-btn-serial">{posImei}</span>}
                         </button>
                         {isCustom && (
                           <button
@@ -495,7 +497,7 @@ function App() {
               </div>
               <p className="preview-label">
                 {airline.name} · {activeType?.label} · {device.width} × {device.height}
-                {serial && ` · ${serial}`}
+                {imei && ` · ${imei}`}
               </p>
             </section>
           </>

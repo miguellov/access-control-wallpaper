@@ -33,6 +33,13 @@
   flex-shrink: 0;
 }
 
+.header-logo--app {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
 .header h1 {
   font-size: 1rem;
   font-weight: 600;
@@ -592,9 +599,29 @@
   opacity: 0.55;
 }
 
+.inventory-row--repair {
+  background: rgba(245, 158, 11, 0.08);
+}
+
 .inventory-row--inactive .inventory-cell--serial {
   color: #ff6b6b;
   font-weight: 600;
+}
+
+.status-select--available {
+  color: #34d399;
+}
+
+.status-select--repair {
+  color: #f59e0b;
+}
+
+.status-select--inoperative {
+  color: #ff6b6b;
+}
+
+.inventory-status-chip--mobile {
+  display: none;
 }
 
 .inventory-cell--serial {
@@ -732,7 +759,7 @@
   }
 
   .inventory-cell--serial::before {
-    content: 'Serial: ';
+    content: 'IMEI: ';
     color: var(--text-muted);
   }
 
