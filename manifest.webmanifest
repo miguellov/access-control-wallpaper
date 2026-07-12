@@ -1,7 +1,7 @@
 {
-  "name": "Access Control Wallpaper",
-  "short_name": "AC Wallpaper",
-  "description": "Generador de fondos WestJet y JetBlue para Samsung Galaxy",
+  "name": "Wallpaper Access",
+  "short_name": "Wallpaper Access",
+  "description": "Generador de fondos de acceso para aerolíneas en Samsung Galaxy",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
