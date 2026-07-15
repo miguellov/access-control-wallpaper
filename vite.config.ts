@@ -5,4 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/access-control-wallpaper/',
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    copyPublicDir: true,
+  },
+  publicDir: 'public',
 })
